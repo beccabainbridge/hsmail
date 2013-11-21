@@ -12,6 +12,7 @@ from urlparse import parse_qsl
 
 from zope.interface import Interface, Attribute, implements
 
+from imap import get_messages
 
 app = Klein()
 
@@ -62,34 +63,46 @@ def home(request):
         
         return request.redirect('/')
         
+    d = get_messages(login.email, login.password)
 
-    return '''
-    <!DOCTYPE html>
-     <html>
-       <head>
-        <style>
-          label {display:block;}
-        </style>
-       </head>
-       <body>
-         <form method="post" action="/">
-           <p>
-             <label for="to">To:</label>
-             <input type="text" id="to" name="to"></input>
-           </p>
-           <p>
-             <label for="subject">Subject</label>
-             <input type="text" id="subject" name="subject"></input>
-           </p>
-           <p>
-             <label for="message">Message</label>
-             <textarea rows="10" cols="50" id="message" name="message"></textarea>
-           </p>
-           <input type="Submit"></input>
-         </form>
-       </body>
-     </html>
-     '''
+    def mainpage(messages):
+        return ('''
+        <!DOCTYPE html>
+         <html>
+           <head>
+            <style>
+              label {display:block;}
+            </style>
+           </head>
+           <body>
+           <br/>
+           ''' +
+
+           '<br/>'.join(m['Date'] for i, m in messages) +
+
+           '''
+           <br/>
+             <form method="post" action="/">
+               <p>
+                 <label for="to">To:</label>
+                 <input type="text" id="to" name="to"></input>
+               </p>
+               <p>
+                 <label for="subject">Subject</label>
+                 <input type="text" id="subject" name="subject"></input>
+               </p>
+               <p>
+                 <label for="message">Message</label>
+                 <textarea rows="10" cols="50" id="message" name="message"></textarea>
+               </p>
+               <input type="Submit"></input>
+             </form>
+           </body>
+         </html>
+         ''')
+
+    d.addCallback(mainpage)
+    return d
 
 
 @app.route('/login', methods=['GET', 'POST'])
