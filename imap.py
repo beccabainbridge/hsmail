@@ -11,6 +11,7 @@ particular mailbox.
 
 import os
 import sys
+import email
 
 from twisted.internet import protocol
 from twisted.internet import ssl
@@ -19,28 +20,6 @@ from twisted.internet import stdio
 from twisted.mail import imap4
 from twisted.protocols import basic
 from twisted.python import log
-
-
-class TrivialPrompter(basic.LineReceiver):
-    from os import linesep as delimiter
-
-    promptDeferred = None
-
-    def prompt(self, msg):
-        assert self.promptDeferred is None
-        self.display(msg)
-        self.promptDeferred = defer.Deferred()
-        return self.promptDeferred
-
-    def display(self, msg):
-        self.transport.write(msg)
-
-    def lineReceived(self, line):
-        if self.promptDeferred is None:
-            return
-        d, self.promptDeferred = self.promptDeferred, None
-        d.callback(line)
-
 
 
 class SimpleIMAP4Client(imap4.IMAP4Client):
@@ -86,9 +65,9 @@ class SimpleIMAP4ClientFactory(protocol.ClientFactory):
         p.greetDeferred = self.onConn
 
         p.registerAuthenticator(imap4.PLAINAuthenticator(self.username))
-        #p.registerAuthenticator(imap4.LOGINAuthenticator(self.username))
-        #p.registerAuthenticator(
-        #        imap4.CramMD5ClientAuthenticator(self.username))
+        p.registerAuthenticator(imap4.LOGINAuthenticator(self.username))
+        p.registerAuthenticator(
+                imap4.CramMD5ClientAuthenticator(self.username))
 
         return p
 
@@ -103,13 +82,6 @@ def cbServerGreeting(proto, username, password):
     """
     Initial callback - invoked after the server sends us its greet message.
     """
-    # Hook up stdio
-    tp = TrivialPrompter()
-    stdio.StandardIO(tp)
-
-    # And make it easily accessible
-    proto.prompt = tp.prompt
-    proto.display = tp.display
 
     # Try to authenticate securely
     return proto.authenticate(password
@@ -148,8 +120,7 @@ def ebAuthentication(failure, proto, username, password):
     If you are trying to connect to your Gmail account, you will be here!
     """
     failure.trap(imap4.NoSupportedAuthentication)
-    return proto.prompt(
-        "No secure authentication available. Login insecurely? (y/N) "
+    return defer.succeed("y"
         ).addCallback(cbInsecureLogin, proto, username, password
         )
 
@@ -174,7 +145,7 @@ def cbMailboxList(result, proto):
     s = '\n'.join(['%d. %s' % (n + 1, m) for (n, m) in zip(range(len(result)), result)])
     if not s:
         return defer.fail(Exception("No mailboxes exist on server!"))
-    return proto.prompt(s + "\nWhich mailbox? [1] "
+    return defer.succeed("1"
         ).addCallback(cbPickMailbox, proto, result
         )
 
@@ -195,11 +166,7 @@ def cbExamineMbox(result, proto):
 
     Retrieve the subject header of every message in the mailbox.
     """
-    return proto.fetchSpecific('1:*',
-                               headerType='HEADER.FIELDS',
-                               headerArgs=['SUBJECT'],
-        ).addCallback(cbFetch, proto
-        )
+    return proto.fetchMessage('1:*').addCallback(cbFetch, proto)
 
 
 def cbFetch(result, proto):
@@ -207,14 +174,11 @@ def cbFetch(result, proto):
     Finally, display headers.
     """
     if result:
-        keys = result.keys()
-        keys.sort()
-        for k in keys:
-            proto.display('%s %s' % (k, result[k][0][2]))
+        proto.messages = [(i, email.message_from_string(d['RFC822'])) for i, d in result.items()]
     else:
         print "Hey, an empty mailbox!"
 
-    return proto.logout()
+    return proto
 
 
 def cbClose(result):
@@ -224,28 +188,41 @@ def cbClose(result):
     from twisted.internet import reactor
     reactor.stop()
 
+def cbReturnMessage(proto):
+    messages = proto.messages
+    d = proto.logout()
+    return d.addCallback(lambda x: messages)
 
-def main():
 
+def get_messages(username, password):
     hostname = 'imap.gmail.com'
-    port = '993'
-    username = os.environ['EXAMPLE_GMAIL_ADDRESS']
-    password = os.environ['EXAMPLE_GMAIL_PASSWORD']
+    port = 993
 
     onConn = defer.Deferred(
         ).addCallback(cbServerGreeting, username, password
         ).addErrback(ebConnection
-        ).addBoth(cbClose)
+        ).addBoth(cbReturnMessage)
 
     factory = SimpleIMAP4ClientFactory(username, onConn)
 
     from twisted.internet import reactor
-    if port == '993':
-        reactor.connectSSL(hostname, int(port), factory, ssl.ClientContextFactory())
-    else:
-        if not port:
-            port = 143
-        reactor.connectTCP(hostname, int(port), factory)
+    reactor.connectSSL(hostname, port, factory, ssl.ClientContextFactory())
+
+    return onConn
+
+def print_messages(x):
+    print x
+
+def main():
+
+    username = os.environ['EXAMPLE_GMAIL_ADDRESS']
+    password = os.environ['EXAMPLE_GMAIL_PASSWORD']
+
+    d = get_messages(username, password)
+    d.addCallback(print_messages)
+    d.addBoth(cbClose)
+
+    from twisted.internet import reactor
     reactor.run()
 
 
