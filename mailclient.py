@@ -19,13 +19,6 @@ from twisted.internet.defer import Deferred
 from twisted.internet import reactor
 
 
-
-USERNAME = os.environ['SMTP_EMAIL']
-PASSWORD = os.environ['SMTP_PASS']
-HOST = os.environ['SMTP_HOST']
-PORT = os.environ['SMTP_PORT']
-
-
 def createMessage(fromEmail, toEmail, subject, body):
     msg = Multipart.MIMEMultipart()
     msg['From'] = fromEmail
@@ -38,22 +31,22 @@ def createMessage(fromEmail, toEmail, subject, body):
     return str(msg)
 
 
-def sendmail(fromEmail, toEmail, subject, body):
+def sendmail(username, password, smtpHost, smtpPort, fromEmail, toEmail, subject, body):
     resultDeferred = Deferred()
     contextFactory = ClientContextFactory()
     contextFactory.method = SSLv3_METHOD
 
     msg = createMessage(fromEmail, toEmail, subject, body)
     senderFactory = ESMTPSenderFactory(
-        USERNAME,
-        PASSWORD,
+        username,
+        password,
         fromEmail,
         toEmail,
         StringIO(msg),
         resultDeferred,
         contextFactory=contextFactory)
     
-    reactor.connectTCP(HOST, PORT, senderFactory)
+    reactor.connectTCP(smtpHost, smtpPort, senderFactory)
     return resultDeferred
 
 

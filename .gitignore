@@ -32,3 +32,6 @@ nosetests.xml
 
 # Common name for virtual environments
 venv
+
+#environmental variables
+.env
