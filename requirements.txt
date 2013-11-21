@@ -2,3 +2,4 @@ Twisted==13.2.0
 klein==0.2.2
 ipdb==0.8
 ipython==1.1.0
+pyOpenSSL==0.13.1
