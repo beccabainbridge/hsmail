@@ -1,0 +1,15 @@
+label {
+    display: block;
+}
+span {
+    width: 50%;
+}
+.content {
+    font-size: 75%;
+}
+.date {
+    font-style: italic;
+}
+.unselected p {
+    display: none;
+}

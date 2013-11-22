@@ -1,17 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <style>
-      label {display:block;}
-      span {width: 50%}
-    </style>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <script src="/static/main.js"></script>
   </head>
   <body>
     <br/>
-    {% for i, m in messages %}
-    <br/><p><span>{{m['Subject']}}</span> <span>{{m['Date']}}</span></p>
-    <br/>
+    <ol>
+    {% for i, m in messages|reverse %}
+      <li class="messages unselected">
+        <span class="subject">{{m['Subject']}}</span>
+        <span class="date">{{m['Date']}}</span>
+      {% for part in m.walk() %}
+        {% if part.get_content_type() == 'text/plain' %}
+          <p class="content">{{part.get_payload()}}</p>
+        {% endif %}
+      {% endfor %}
+      </li>
     {% endfor %}
+    </ol>
     <form method="post" action="/">
       <p>
         <label for="to">To:</label>

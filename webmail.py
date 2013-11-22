@@ -5,6 +5,7 @@ from klein import Klein
 from twisted.python.components import registerAdapter
 from twisted.internet import reactor
 from twisted.web.server import Session
+from twisted.web.static import File
 from zope.interface import Interface, Attribute, implements
 from jinja2 import Environment, FileSystemLoader
 
@@ -35,6 +36,9 @@ def getFieldDict(request):
     content = (cgi.escape(request.content.read()))
     return dict(parse_qsl(content))
 
+@app.route('/static/', branch=True)
+def static(request):
+    return File('./static')
 
 @app.route('/', methods = ['GET', 'POST'])
 def home(request):
