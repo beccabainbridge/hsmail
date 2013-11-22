@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      label {display:block;}
+      span {width: 50%}
+    </style>
+  </head>
+  <body>
+    <br/>
+    {% for i, m in messages %}
+    <br/><p><span>{{m['Subject']}}</span> <span>{{m['Date']}}</span></p>
+    <br/>
+    {% endfor %}
+    <form method="post" action="/">
+      <p>
+        <label for="to">To:</label>
+        <input type="text" id="to" name="to"></input>
+      </p>
+      <p>
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" name="subject"></input>
+      </p>
+      <p>
+        <label for="message">Message</label>
+        <textarea rows="10" cols="50" id="message" name="message"></textarea>
+      </p>
+      <input type="Submit"></input>
+    </form>
+  </body>
+</html>
