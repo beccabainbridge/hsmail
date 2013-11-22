@@ -72,13 +72,14 @@ def home(request):
            <head>
             <style>
               label {display:block;}
+              span {width: 50%}
             </style>
            </head>
            <body>
            <br/>
            ''' +
 
-           '<br/>'.join(m['Date'] for i, m in messages) +
+           '<br/>'.join('<p><span>%s</span> <span>%s</span></p>' % (m['Subject'], m['Date']) for i, m in messages) +
 
            '''
            <br/>
